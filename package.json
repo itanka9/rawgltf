@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "parcel src/index.html"
+        "start": "mkdir -p dist && cp vendor/* dist/ && parcel src/index.html"
     },
     "keywords": [],
     "author": "",
