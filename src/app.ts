@@ -35,6 +35,32 @@ function renderLoop(ctx, scene) {
     step();
 }
 
+const glBuffers: WebGLBuffer[] = [];
+
+function useBuffer(ctx: any, accessor: any) {
+    const gl = ctx.gl as WebGLRenderingContext;
+    const bufferView = ctx.gltf.bufferViews[accessor.bufferView];
+    if (!glBuffers[accessor.bufferView]) {
+        const buffer = gl.createBuffer();
+        if (!buffer) {
+            return;
+        }
+
+        gl.bindBuffer(bufferView.target, buffer);
+        gl.bufferData(
+            bufferView.target,
+            ctx.buffers[bufferView.buffer].slice(
+                bufferView.byteOffset,
+                bufferView.byteOffset + bufferView.byteLength,
+            ),
+            gl.STATIC_DRAW,
+        );
+        glBuffers[accessor.bufferView] = buffer;
+    } else {
+        gl.bindBuffer(bufferView.target, glBuffers[accessor.bufferView]);
+    }
+}
+
 function drawNodes(ctx: any, nodes: number[]) {
     const gl = ctx.gl as WebGLRenderingContext;
     for (const i of nodes) {
@@ -55,16 +81,8 @@ function drawNodes(ctx: any, nodes: number[]) {
                 for (const name in attributes) {
                     const accessor = ctx.gltf.accessors[attributes[name]];
                     const bufferView = ctx.gltf.bufferViews[accessor.bufferView];
-                    const buffer = gl.createBuffer();
-                    gl.bindBuffer(bufferView.target, buffer);
-                    gl.bufferData(
-                        bufferView.target,
-                        ctx.buffers[bufferView.buffer].slice(
-                            bufferView.byteOffset,
-                            bufferView.byteOffset + bufferView.byteLength,
-                        ),
-                        gl.STATIC_DRAW,
-                    );
+                    useBuffer(ctx, accessor);
+
                     const attrLocation = gl.getAttribLocation(program, `a_${name.toLowerCase()}`);
                     if (attrLocation === -1) {
                         continue;
@@ -85,18 +103,8 @@ function drawNodes(ctx: any, nodes: number[]) {
                 let elementAccessor = null;
                 if (primitive.indices !== undefined) {
                     const accessor = ctx.gltf.accessors[primitive.indices];
-                    const bufferView = ctx.gltf.bufferViews[accessor.bufferView];
-                    const buffer = gl.createBuffer();
+                    useBuffer(ctx, accessor);
                     elementAccessor = accessor;
-                    gl.bindBuffer(bufferView.target, buffer);
-                    gl.bufferData(
-                        bufferView.target,
-                        ctx.buffers[bufferView.buffer].slice(
-                            bufferView.byteOffset,
-                            bufferView.byteOffset + bufferView.byteLength,
-                        ),
-                        gl.STATIC_DRAW,
-                    );
                 }
 
                 const matrixLoc = gl.getUniformLocation(program, 'matrix');
